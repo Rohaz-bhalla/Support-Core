@@ -155,7 +155,7 @@ Reasoning:
 
 ### 1. Clone the repository
 ```bash
-git clone https://github.com/your-username/spur-support-ai.git
+git clone https://github.com/Rohaz-bhalla/Support-Core.git
 cd Support-Core
 ```
 
@@ -165,6 +165,69 @@ pnpm install
 --OR--
  npm install
 ```
+---
+
+## Rate Limiting
+
+To prevent abuse and ensure fair usage of the API, basic rate limiting is implemented on the chat endpoint.
+
+---
+
+## Why Rate Limiting?
+
+- Protects the LLM API from excessive requests
+- Prevents accidental or malicious abuse
+- Demonstrates production-aware backend design
+- Keeps costs predictable when using paid LLM APIs
+
+---
+
+## How It Works
+
+- Rate limiting is applied to the **POST `/api/chat`** endpoint
+- Requests are limited **per IP address**
+- Each IP can make **up to 20 requests per minute**
+
+If the limit is exceeded, the API responds with:
+
+- **HTTP Status:** `429 Too Many Requests`
+- **Message:** `"Too many requests. Please slow down."`
+
+---
+
+## Implementation Details
+
+- Implemented using an **in-memory map**
+- Tracks:
+  - Request count
+  - Time window per IP
+- Automatically resets after the time window expires
+
+This approach is intentionally simple and lightweight, suitable for the scope of this assignment.
+
+---
+
+## Trade-offs
+
+- In-memory rate limiting resets on server restart
+- Not shared across multiple server instances
+
+For a production system, this could be replaced with:
+- Redis-based rate limiting
+- Edge middleware rate limiting
+- Provider-based solutions (e.g. Vercel Edge, Cloudflare)
+
+---
+
+## Why This Approach Was Chosen
+
+- No external dependencies required
+- Easy to reason about and maintain
+- Clearly demonstrates API protection concepts
+- Keeps focus on core product functionality
+
+This strikes a balance between realism and simplicity for the assignment.
+
 ---
 
 # How to Obtain API keys -:
