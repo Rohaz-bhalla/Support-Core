@@ -3,6 +3,7 @@ import { db } from "../../lib/db";
 import { conversations, messages } from "../../lib/schema";
 import { eq } from "drizzle-orm";
 import { generateReply } from "../../lib/groq";
+import { rateLimit } from "../../lib/rate-limit";
 
 interface ChatMessage {
   role: "user" | "assistant";
@@ -11,6 +12,22 @@ interface ChatMessage {
 
 export async function POST(req: Request) {
   try {
+    /* ---------- RATE LIMIT ---------- */
+    const ip =
+      req.headers.get("x-forwarded-for") ??
+      req.headers.get("x-real-ip") ??
+      "unknown";
+
+    const { allowed } = rateLimit(ip);
+
+    if (!allowed) {
+      return NextResponse.json(
+        { reply: "Too many requests. Please slow down." },
+        { status: 429 }
+      );
+    }
+    /* -------------------------------- */
+
     const { message, sessionId } = (await req.json()) as {
       message?: string;
       sessionId?: string;
@@ -111,4 +128,3 @@ export async function DELETE(req: Request) {
 
   return NextResponse.json({ success: true });
 }
-
