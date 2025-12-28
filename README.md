@@ -207,6 +207,86 @@ This approach is intentionally simple and lightweight, suitable for the scope of
 
 ---
 
+## 🎤 Voice Input Support
+
+This application includes optional voice input functionality to improve accessibility and hands-free interaction.
+
+Voice input is implemented using the **Web Speech API** provided by modern browsers.
+
+---
+
+## How It Works
+
+- Uses the browser’s native **SpeechRecognition** interface
+- Converts spoken input into text in real time
+- Spoken text is automatically placed into the chat input field
+- Supports basic voice commands:
+  - **“new chat”** → starts a fresh conversation
+  - **“send message”** → sends the current input
+
+The feature is entirely client-side and does not affect backend performance.
+
+---
+
+## Browser Support
+
+Voice input works best in **Chromium-based browsers**:
+
+- ✅ Google Chrome
+- ✅ Microsoft Edge
+
+Due to aggressive privacy protections, some browsers may block the Web Speech API:
+
+- ⚠️ Brave — voice input may be unavailable
+- ❌ Firefox — Web Speech API not supported
+
+This is a browser-level limitation, not an application bug.
+
+---
+
+## Error Handling & Stability
+
+The implementation includes safeguards to handle common browser issues:
+
+- Prevents multiple recognition sessions from running simultaneously
+- Gracefully recovers from browser-thrown `"network"` errors
+- Resets recognition state on failure to avoid crashes
+- Automatically stops listening after speech ends
+
+These measures ensure a stable user experience even when browser speech services behave inconsistently.
+
+---
+
+## Privacy Considerations
+
+- No audio data is stored or sent to the backend
+- Voice processing is handled entirely by the browser
+- The application only receives the final transcribed text
+
+---
+
+## Why This Approach Was Chosen
+
+- No additional backend infrastructure required
+- Low latency and responsive UX
+- Demonstrates accessibility-aware frontend design
+- Keeps the core application lightweight
+
+---
+
+## Limitations & Future Improvements
+
+If more time were available, possible enhancements include:
+
+- Backend-based speech-to-text (e.g. Whisper, Deepgram)
+- Visual waveform indicators while listening
+- Text-to-speech for AI responses
+- Wake-word activation (e.g. “Hey Assistant”)
+
+These improvements were intentionally out of scope for this assignment.
+
+---
+
 ## Trade-offs
 
 - In-memory rate limiting resets on server restart

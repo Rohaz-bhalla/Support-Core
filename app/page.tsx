@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useEffect, useRef, useState } from "react";
@@ -10,6 +11,8 @@ import {
   Trash2,
   Menu,
   X,
+  Mic,
+  MicOff,
 } from "lucide-react";
 import { ChatContext } from "@/components/chat-context";
 
@@ -32,6 +35,11 @@ export default function ChatPage() {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  /* 🎤 Voice */
+  const [listening, setListening] = useState(false);
+  const recognitionRef = useRef<any>(null);
+  const isRecognizingRef = useRef(false);
+
   const bottomRef = useRef<HTMLDivElement>(null);
 
   /* ---------- LOAD SESSION ---------- */
@@ -47,6 +55,20 @@ export default function ChatPage() {
   useEffect(() => {
     if (sessionId) localStorage.setItem("sessionId", sessionId);
   }, [sessionId]);
+
+  /* ---------- NEW CHAT EVENT (FIXED) ---------- */
+
+  useEffect(() => {
+    function handleNewChat() {
+      setMessages([]);
+      setSessionId(null);
+      setInput("");
+      localStorage.removeItem("sessionId");
+    }
+
+    window.addEventListener("new-chat", handleNewChat);
+    return () => window.removeEventListener("new-chat", handleNewChat);
+  }, []);
 
   /* ---------- LOAD CHAT HISTORY ---------- */
 
@@ -65,6 +87,70 @@ export default function ChatPage() {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  /* ---------- VOICE INIT ---------- */
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const SpeechRecognition =
+      (window as any).SpeechRecognition ||
+      (window as any).webkitSpeechRecognition;
+
+    if (!SpeechRecognition) return;
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = "en-US";
+    recognition.continuous = false;
+    recognition.interimResults = false;
+
+    recognition.onstart = () => {
+      isRecognizingRef.current = true;
+      setListening(true);
+    };
+
+    recognition.onresult = (event: any) => {
+      const transcript = event.results[0][0].transcript;
+      const text = transcript.toLowerCase();
+
+      if (text.includes("new chat")) {
+        window.dispatchEvent(new Event("new-chat"));
+        return;
+      }
+
+      if (text.includes("send message")) {
+        sendMessage();
+        return;
+      }
+
+      setInput(transcript);
+    };
+
+    recognition.onerror = () => {
+      isRecognizingRef.current = false;
+      setListening(false);
+      recognition.abort();
+    };
+
+    recognition.onend = () => {
+      isRecognizingRef.current = false;
+      setListening(false);
+    };
+
+    recognitionRef.current = recognition;
+  }, []);
+
+  function toggleListening() {
+    const recognition = recognitionRef.current;
+    if (!recognition) return;
+
+    if (isRecognizingRef.current) {
+      recognition.stop();
+      return;
+    }
+
+    recognition.start();
+  }
 
   /* ---------- SEND MESSAGE ---------- */
 
@@ -123,14 +209,9 @@ export default function ChatPage() {
   return (
     <ChatContext.Provider
       value={{
-        newChat: () => {
-          setMessages([]);
-          setSessionId(null);
-          localStorage.removeItem("sessionId");
-        },
+        newChat: () => window.dispatchEvent(new Event("new-chat")),
       }}
     >
-      {/* ROOT: lock scrolling */}
       <div className="h-screen overflow-hidden pt-14 flex">
         {/* Hamburger */}
         <button
@@ -158,53 +239,42 @@ export default function ChatPage() {
           `}
         >
           <div className="h-full flex flex-col">
-            {/* Sidebar Header */}
-            <div className="flex items-center justify-between px-4 py-3 border-b bg-background sticky top-0 z-50">
+            <div className="flex items-center justify-between px-4 py-3 border-b">
               <h2 className="font-semibold">Chat History</h2>
               <button
-                className="md:hidden text-foreground"
+                className="md:hidden"
                 onClick={() => setSidebarOpen(false)}
               >
                 <X className="h-6 w-6" />
               </button>
             </div>
 
-            {/* Sidebar List */}
             <ScrollArea className="flex-1 p-2">
-              <div className="space-y-2">
-                {sessions.map((s) => (
-                  <div
-                    key={s.id}
-                    className={`flex items-center justify-between rounded px-2 py-1 hover:bg-muted ${
-                      sessionId === s.id ? "bg-muted" : ""
-                    }`}
+              {sessions.map((s) => (
+                <div
+                  key={s.id}
+                  className="flex items-center justify-between px-2 py-1 rounded hover:bg-muted"
+                >
+                  <button
+                    className="flex-1 truncate text-left"
+                    onClick={() => {
+                      setSessionId(s.id);
+                      setSidebarOpen(false);
+                    }}
                   >
-                    <button
-                      onClick={() => {
-                        setSessionId(s.id);
-                        setSidebarOpen(false);
-                      }}
-                      className="flex-1 text-left truncate"
-                    >
-                      {s.title}
-                    </button>
-
-                    <button
-                      onClick={() => deleteChat(s.id)}
-                      className="text-muted-foreground hover:text-destructive"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
-                ))}
-              </div>
+                    {s.title}
+                  </button>
+                  <button onClick={() => deleteChat(s.id)}>
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              ))}
             </ScrollArea>
           </div>
         </aside>
 
-        {/* Chat Area */}
+        {/* Chat */}
         <main className="flex-1 flex flex-col">
-          {/* Messages */}
           <ScrollArea className="flex-1 p-4">
             <div className="max-w-3xl mx-auto space-y-4">
               {messages.map((m, i) => (
@@ -215,12 +285,11 @@ export default function ChatPage() {
                   }`}
                 >
                   <div
-                    className={`rounded-lg px-4 py-2 text-sm max-w-[80%]
-                      ${
-                        m.sender === "user"
-                          ? "bg-blue-600 text-white"
-                          : "bg-muted text-foreground"
-                      }`}
+                    className={`rounded-lg px-4 py-2 max-w-[80%] text-sm ${
+                      m.sender === "user"
+                        ? "bg-blue-600 text-white"
+                        : "bg-muted"
+                    }`}
                   >
                     {m.text}
                   </div>
@@ -230,22 +299,38 @@ export default function ChatPage() {
             </div>
           </ScrollArea>
 
-          {/* Input (PINNED) */}
-          <div className="border-t bg-background p-4 flex gap-2">
-            <Input
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-              placeholder="Ask about shipping, returns, orders..."
-              disabled={loading}
-            />
-            <Button onClick={sendMessage} disabled={loading}>
-              {loading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
+          {/* Input */}
+          <div className="border-t bg-background p-4">
+            <div className="flex gap-2 items-center">
+              <Input
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder="Ask about shipping, returns, orders..."
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                  }
+                }}
+              />
+
+              <Button variant="outline" onClick={toggleListening}>
+                {listening ? (
+                  <MicOff className="h-4 w-4 text-red-500" />
+                ) : (
+                  <Mic className="h-4 w-4" />
+                )}
+              </Button>
+
+              <Button onClick={sendMessage}>
                 <ArrowUpIcon className="h-4 w-4" />
-              )}
-            </Button>
+              </Button>
+            </div>
+
+            {/* Helper text */}
+            <p className="mt-2 text-xs text-muted-foreground">
+              Voice input works best in Chromium-based browsers (Chrome, Edge).
+            </p>
           </div>
         </main>
       </div>
