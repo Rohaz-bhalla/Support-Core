@@ -310,6 +310,17 @@ This strikes a balance between realism and simplicity for the assignment.
 
 ---
 
+## Progressive Web App (PWA)
+
+This app supports PWA features via Next.js App Router.
+
+### Features
+- Installable via browser “Add to Home Screen”
+- Manifest and icons configured
+- App-like standalone experience
+
+---
+
 # How to Obtain API keys -:
 
 ## Neon Database Setup (PostgreSQL)

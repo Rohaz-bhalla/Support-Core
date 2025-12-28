@@ -5,6 +5,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { Navbar } from "@/components/Navbar";
 import { ChatProvider } from "@/components/chat-context";
 
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -18,6 +19,8 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Spur Support AI",
   description: "AI-powered customer support chat",
+  manifest: "/manifest.json",
+  themeColor: "#000000",
 };
 
 export default function RootLayout({
