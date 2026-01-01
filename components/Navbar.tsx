@@ -28,14 +28,17 @@ export function Navbar() {
       setInstallPrompt(e);
       setIsInstallable(true);
     };
+
     window.addEventListener("beforeinstallprompt", handler);
     return () => window.removeEventListener("beforeinstallprompt", handler);
   }, []);
 
   async function handleInstall() {
     if (!installPrompt) return;
+
     installPrompt.prompt();
     await installPrompt.userChoice;
+
     setInstallPrompt(null);
     setIsInstallable(false);
   }
@@ -72,6 +75,11 @@ export function Navbar() {
 
         {/* RIGHT */}
         <div className="flex items-center gap-3">
+          {/* Mobile: Theme toggle always visible */}
+          <div className="md:hidden">
+            <ModeToggle />
+          </div>
+
           {/* Desktop actions */}
           <div className="hidden md:flex items-center gap-4">
             {isInstallable && (
@@ -131,10 +139,13 @@ export function Navbar() {
       {/* MOBILE MENU */}
       {menuOpen && (
         <>
+          {/* Overlay */}
           <div
             className="fixed inset-0 z-40 bg-black/40"
             onClick={() => setMenuOpen(false)}
           />
+
+          {/* Drawer */}
           <div className="fixed right-0 top-0 z-50 h-full w-64 bg-background border-l p-4 space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="font-semibold">Menu</h2>
@@ -153,17 +164,32 @@ export function Navbar() {
               </button>
             )}
 
-            <a href="https://github.com/Rohaz-bhalla" target="_blank" className="block">
+            <a
+              href="https://github.com/Rohaz-bhalla"
+              target="_blank"
+              rel="noreferrer"
+              className="block hover:underline"
+            >
               GitHub
             </a>
-            <a href="https://www.linkedin.com/in/rohaz-bhalla" target="_blank" className="block">
+
+            <a
+              href="https://www.linkedin.com/in/rohaz-bhalla"
+              target="_blank"
+              rel="noreferrer"
+              className="block hover:underline"
+            >
               LinkedIn
             </a>
-            <a href="https://x.com/RohazBhalla" target="_blank" className="block">
+
+            <a
+              href="https://x.com/RohazBhalla"
+              target="_blank"
+              rel="noreferrer"
+              className="block hover:underline"
+            >
               X (Twitter)
             </a>
-
-            <ModeToggle />
           </div>
         </>
       )}

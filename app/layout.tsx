@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -20,6 +20,10 @@ export const metadata: Metadata = {
   title: "Spur Support AI",
   description: "AI-powered customer support chat",
   manifest: "/manifest.json",
+  //themeColor: "#000000",
+};
+
+export const viewport: Viewport = {
   themeColor: "#000000",
 };
 
