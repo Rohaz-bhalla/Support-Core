@@ -10,29 +10,40 @@ interface ChatMessage {
   content: string;
 }
 
-/* ================= CORS ================= */
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "https://rohaz-dev.vercel.app",
-  "Access-Control-Allow-Methods": "POST, GET, DELETE, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type",
-};
+/* ================= CORS (DYNAMIC) ================= */
+function getCorsHeaders(req: Request) {
+  const origin = req.headers.get("origin") ?? "";
+
+  const allowedOrigins = [
+    "https://rohaz-dev.vercel.app",
+  ];
+
+  return {
+    "Access-Control-Allow-Origin": allowedOrigins.includes(origin)
+      ? origin
+      : "https://rohaz-dev.vercel.app",
+    "Access-Control-Allow-Methods": "POST, GET, DELETE, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type",
+  };
+}
 
 /* ================= OPTIONS ================= */
-export async function OPTIONS() {
+export async function OPTIONS(req: Request) {
   return new Response(null, {
     status: 200,
-    headers: corsHeaders,
+    headers: getCorsHeaders(req),
   });
 }
 
 /* ================= POST ================= */
 export async function POST(req: Request) {
+  const corsHeaders = getCorsHeaders(req);
+
   try {
     /* ---------- RATE LIMIT ---------- */
     const ip =
-      req.headers.get("x-forwarded-for") ??
-      req.headers.get("x-real-ip") ??
-      "unknown";
+      req.headers.get("x-forwarded-for")?.split(",")[0] ??
+      "127.0.0.1";
 
     const { allowed } = rateLimit(ip);
 
@@ -49,8 +60,6 @@ export async function POST(req: Request) {
       sessionId?: string;
       source?: "portfolio" | "spur";
     };
-
-    const chatSource = source ?? "spur";
 
     if (!message || !message.trim()) {
       return NextResponse.json(
@@ -91,7 +100,7 @@ export async function POST(req: Request) {
     const reply = await generateReply(
       formattedHistory,
       message,
-      chatSource
+      source ?? "spur"
     );
 
     await db.insert(messages).values({
@@ -101,14 +110,11 @@ export async function POST(req: Request) {
     });
 
     return NextResponse.json(
-      {
-        reply,
-        sessionId: conversationId,
-      },
+      { reply, sessionId: conversationId },
       { headers: corsHeaders }
     );
   } catch (err) {
-    console.error(err);
+    console.error("CHAT ERROR:", err);
     return NextResponse.json(
       { reply: "Something went wrong." },
       { status: 500, headers: corsHeaders }
@@ -118,6 +124,7 @@ export async function POST(req: Request) {
 
 /* ================= GET ================= */
 export async function GET(req: Request) {
+  const corsHeaders = getCorsHeaders(req);
   const { searchParams } = new URL(req.url);
   const sessionId = searchParams.get("sessionId");
 
@@ -147,6 +154,7 @@ export async function GET(req: Request) {
 
 /* ================= DELETE ================= */
 export async function DELETE(req: Request) {
+  const corsHeaders = getCorsHeaders(req);
   const { searchParams } = new URL(req.url);
   const sessionId = searchParams.get("sessionId");
 
