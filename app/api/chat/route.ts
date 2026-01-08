@@ -28,10 +28,13 @@ export async function POST(req: Request) {
     }
     /* -------------------------------- */
 
-    const { message, sessionId } = (await req.json()) as {
+    const { message, sessionId, source } = (await req.json()) as {
       message?: string;
       sessionId?: string;
+      source?: "portfolio" | "spur";
     };
+
+    const chatSource = source ?? "spur";
 
     if (!message || !message.trim()) {
       return NextResponse.json(
@@ -69,7 +72,7 @@ export async function POST(req: Request) {
       content: m.text,
     }));
 
-    const reply = await generateReply(formattedHistory, message);
+    const reply = await generateReply(formattedHistory, message, chatSource);
 
     await db.insert(messages).values({
       conversationId,
@@ -122,9 +125,7 @@ export async function DELETE(req: Request) {
     return NextResponse.json({ success: false });
   }
 
-  await db
-    .delete(conversations)
-    .where(eq(conversations.id, sessionId));
+  await db.delete(conversations).where(eq(conversations.id, sessionId));
 
   return NextResponse.json({ success: true });
 }
