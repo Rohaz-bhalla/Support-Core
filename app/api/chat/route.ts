@@ -10,6 +10,22 @@ interface ChatMessage {
   content: string;
 }
 
+/* ================= CORS ================= */
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "https://rohaz-dev.vercel.app",
+  "Access-Control-Allow-Methods": "POST, GET, DELETE, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type",
+};
+
+/* ================= OPTIONS ================= */
+export async function OPTIONS() {
+  return new Response(null, {
+    status: 200,
+    headers: corsHeaders,
+  });
+}
+
+/* ================= POST ================= */
 export async function POST(req: Request) {
   try {
     /* ---------- RATE LIMIT ---------- */
@@ -23,7 +39,7 @@ export async function POST(req: Request) {
     if (!allowed) {
       return NextResponse.json(
         { reply: "Too many requests. Please slow down." },
-        { status: 429 }
+        { status: 429, headers: corsHeaders }
       );
     }
     /* -------------------------------- */
@@ -39,7 +55,7 @@ export async function POST(req: Request) {
     if (!message || !message.trim()) {
       return NextResponse.json(
         { reply: "Message cannot be empty." },
-        { status: 400 }
+        { status: 400, headers: corsHeaders }
       );
     }
 
@@ -72,7 +88,11 @@ export async function POST(req: Request) {
       content: m.text,
     }));
 
-    const reply = await generateReply(formattedHistory, message, chatSource);
+    const reply = await generateReply(
+      formattedHistory,
+      message,
+      chatSource
+    );
 
     await db.insert(messages).values({
       conversationId,
@@ -80,26 +100,32 @@ export async function POST(req: Request) {
       text: reply,
     });
 
-    return NextResponse.json({
-      reply,
-      sessionId: conversationId,
-    });
+    return NextResponse.json(
+      {
+        reply,
+        sessionId: conversationId,
+      },
+      { headers: corsHeaders }
+    );
   } catch (err) {
     console.error(err);
     return NextResponse.json(
       { reply: "Something went wrong." },
-      { status: 500 }
+      { status: 500, headers: corsHeaders }
     );
   }
 }
 
-/* ================= GET: Load Chat History ================= */
+/* ================= GET ================= */
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const sessionId = searchParams.get("sessionId");
 
   if (!sessionId) {
-    return NextResponse.json({ messages: [] });
+    return NextResponse.json(
+      { messages: [] },
+      { headers: corsHeaders }
+    );
   }
 
   const history = await db
@@ -108,24 +134,35 @@ export async function GET(req: Request) {
     .where(eq(messages.conversationId, sessionId))
     .orderBy(messages.createdAt);
 
-  return NextResponse.json({
-    messages: history.map((m) => ({
-      sender: m.sender,
-      text: m.text,
-    })),
-  });
+  return NextResponse.json(
+    {
+      messages: history.map((m) => ({
+        sender: m.sender,
+        text: m.text,
+      })),
+    },
+    { headers: corsHeaders }
+  );
 }
 
-/* ================= DELETE: Delete Chat ================= */
+/* ================= DELETE ================= */
 export async function DELETE(req: Request) {
   const { searchParams } = new URL(req.url);
   const sessionId = searchParams.get("sessionId");
 
   if (!sessionId) {
-    return NextResponse.json({ success: false });
+    return NextResponse.json(
+      { success: false },
+      { headers: corsHeaders }
+    );
   }
 
-  await db.delete(conversations).where(eq(conversations.id, sessionId));
+  await db
+    .delete(conversations)
+    .where(eq(conversations.id, sessionId));
 
-  return NextResponse.json({ success: true });
+  return NextResponse.json(
+    { success: true },
+    { headers: corsHeaders }
+  );
 }
